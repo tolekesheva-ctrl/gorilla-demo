@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Демо-Stars</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+*{box-sizing:border-box}
+body{font-family:system-ui,sans-serif;background:#1a1a2e;color:#fff;margin:0;padding:16px;padding-bottom:40px}
+.balance{font-size:32px;font-weight:bold;text-align:center;margin:16px 0}
+.balance small{display:block;font-size:10px;font-weight:normal;color:#888;margin-top:4px}
+.star{color:#ffd700}
+button{width:100%;padding:16px;font-size:16px;border:none;border-radius:12px;background:#ffd700;color:#1a1a2e;font-weight:bold;margin:8px 0;cursor:pointer}
+button:disabled{background:#444;color:#888;cursor:not-allowed}
+.section{background:#252540;padding:16px;border-radius:12px;margin:12px 0}
+.trophy{padding:10px 0;border-bottom:1px solid #333;display:flex;justify-content:space-between;font-size:14px}
+.trophy:last-child{border-bottom:none}
+.disclaimer{font-size:10px;color:#666;text-align:center;margin-top:24px;line-height:1.5}
+#result{font-size:22px;text-align:center;margin:16px 0;min-height:32px;color:#ffd700;font-weight:bold}
+h3{margin:0 0 12px 0;font-size:16px}
+</style>
+</head>
+<body>
+<div class="balance">
+  <span id="balance">—</span> <span class="star">⭐</span> демо-Stars
+  <small>внутренняя валюта · не Telegram Stars · вывод невозможен</small>
+</div>
+
+<div id="result"></div>
+
+<div class="section">
+  <button id="bonusBtn" onclick="claimBonus()">Забрать 1500 демо-Stars за подписку</button>
+</div>
+
+<div class="section">
+  <button onclick="openCase()">🎲 Открыть кейс (100 демо-Stars)</button>
+</div>
+
+<div class="section">
+  <h3>Инвентарь</h3>
+  <div id="inventory"><div style="color:#666;padding:8px;font-size:14px">Пусто</div></div>
+</div>
+
+<div class="disclaimer">
+  Демо-игра для образовательных целей. Демо-Stars — внутренняя бесплатная валюта, не является Telegram Stars, не имеет денежной стоимости, не может быть куплена или выведена. Трофеи — коллекционные картинки, вывод невозможен.
+</div>
+
+<script>
+const tg = window.Telegram.WebApp;
+tg.ready(); tg.expand();
+const API = window.location.origin;
+
+async function call(method, body={}) {
+  const r = await fetch(API + method, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({initData: tg.initData, ...body})
+  });
+  return r.json();
+}
+
+async function refresh() {
+  const d = await call('/api/balance');
+  if (d.detail) { document.getElementById('balance').textContent='?'; return; }
+  document.getElementById('balance').textContent = d.balance;
+  const btn = document.getElementById('bonusBtn');
+  if (d.bonus_claimed) { btn.disabled = true; btn.textContent = '✓ Бонус получен'; }
+  const inv = await call('/api/inventory');
+  document.getElementById('inventory').innerHTML = inv.items.length
+    ? inv.items.map(i => `<div class="trophy"><span>⭐ ${i.trophy}</span><span style="color:#666;font-size:11px">${i.date.slice(0,10)}</span></div>`).join('')
+    : '<div style="color:#666;padding:8px;font-size:14px">Пусто</div>';
+}
+
+async function claimBonus() {
+  const d = await call('/api/claim-bonus');
+  if (d.error) { tg.showAlert(d.error); return; }
+  tg.showAlert('+1500 демо-Stars!');
+  await refresh();
+}
+
+async function openCase() {
+  const d = await call('/api/open-case');
+  if (d.error) { tg.showAlert(d.error); return; }
+  document.getElementById('result').textContent = '⭐ ' + d.trophy;
+  await refresh();
+}
+
+refresh();
+</script>
+</body>
+</html>
